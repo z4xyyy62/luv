@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Love Heart Garden</title>
+  <style>
+    :root {
+      --bg1: #040404;
+      --bg2: #101015;
+      --pink: #ff5aa8;
+      --pink2: #ff8fc5;
+      --pink3: #ffd4e7;
+      --whiteRose: #fffafc;
+      --green1: #173b1b;
+      --green2: #235528;
+      --green3: #2f7136;
+      --text: #ffeaf4;
+      --panel: rgba(255,255,255,0.08);
+      --panelBorder: rgba(255, 190, 220, 0.25);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at 50% 20%, #161622 0%, var(--bg2) 40%, var(--bg1) 100%);
+    }
+
+    body { position: relative; color: var(--text); }
+
+    canvas#sky, canvas#fireworks {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    canvas#sky { z-index: 0; }
+    canvas#fireworks { z-index: 3; pointer-events: none; }
+
+    .scene {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px 210px;
+    }
+
+    .heart-stage {
+      position: relative;
+      width: min(90vw, 650px);
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 0 16px rgba(255, 90, 168, 0.25));
+    }
+
+    .heart-aura {
+      position: absolute;
+      width: 72%;
+      height: 72%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 95, 170, 0.18) 0%, rgba(255, 95, 170, 0.08) 35%, rgba(255, 95, 170, 0.02) 55%, transparent 72%);
+      filter: blur(12px);
+      animation: breathe 4.2s ease-in-out infinite;
+      z-index: -1;
+    }
+
+    #heart {
+      display: grid;
+      gap: clamp(2px, .48vw, 4px);
+      justify-content: center;
+      align-content: center;
+      transform: none;
+    }
+
+    .pixel {
+      width: clamp(8px, 2.65vw, 16px);
+      height: clamp(8px, 2.65vw, 16px);
+      border-radius: 2px;
+      opacity: 0;
+      transform: scale(.15);
+      transition: opacity .55s ease, transform .7s cubic-bezier(.2,.85,.2,1), box-shadow .6s ease;
+      background: #ff63b4;
+    }
+
+    .pixel.on {
+      opacity: 1;
+      transform: scale(1);
+      background: radial-gradient(circle at 35% 28%, #ffd8ec 0%, #ff84c5 44%, #ff3999 100%);
+      box-shadow: 0 0 9px #ff4da7bb, 0 0 21px #ff4da755;
+    }
+
+    .secret-box {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      width: min(92vw, 700px);
+      z-index: 4;
+    }
+
+    .secret-button {
+      width: 100%;
+      border: 1px solid var(--panelBorder);
+      border-radius: 20px;
+      padding: 15px 18px;
+      font-size: clamp(15px, 2.3vw, 18px);
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(255, 105, 180, 0.20), rgba(255,255,255,0.06));
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+      transition: transform 0.25s ease, background 0.25s ease;
+    }
+
+    .secret-button:hover, .secret-button:active {
+      transform: translateY(-2px);
+      background: linear-gradient(180deg, rgba(255, 105, 180, 0.28), rgba(255,255,255,0.09));
+    }
+
+    .secret-content {
+      margin-top: 10px;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0 18px;
+      transform: translateY(14px) scale(0.98);
+      transition: max-height 0.6s ease, opacity 0.45s ease, transform 0.5s ease, padding 0.4s ease;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(15px);
+      border-radius: 20px;
+      border: 1px solid var(--panelBorder);
+      box-shadow: 0 18px 30px rgba(0,0,0,0.25);
+    }
+
+    .secret-content.open {
+      max-height: 280px;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      padding: 18px;
+    }
+
+    .secret-content p {
+      margin: 0;
+      line-height: 1.9;
+      font-size: clamp(15px, 2.5vw, 18px);
+      white-space: pre-line;
+    }
+
+    .floating-hearts { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+    .mini-heart {
+      position: absolute;
+      bottom: -20px;
+      color: #ff9acb;
+      text-shadow: 0 0 10px rgba(255, 120, 190, 0.5);
+      opacity: 0.82;
+      animation: floatUp linear forwards;
+    }
+
+    .garden {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 185px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .grass-layer {
+      position: absolute;
+      left: -5%;
+      width: 110%;
+      border-radius: 50% 50% 0 0;
+    }
+
+    .grass-back {
+      bottom: 86px;
+      height: 84px;
+      background: radial-gradient(circle at 50% 20%, #356f38 0%, var(--green2) 65%, #19401e 100%);
+    }
+
+    .grass-front {
+      bottom: 0;
+      height: 112px;
+      background: radial-gradient(circle at 50% 0%, #45914a 0%, var(--green3) 60%, #204625 100%);
+      box-shadow: inset 0 12px 18px rgba(255,255,255,0.05);
+    }
+
+    .blades {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 52px;
+      height: 72px;
+      overflow: hidden;
+    }
+
+    .blade {
+      position: absolute;
+      bottom: -10px;
+      width: 3px;
+      border-radius: 999px;
+      transform-origin: bottom center;
+      background: linear-gradient(180deg, #84dd8e 0%, #3f9447 55%, #225128 100%);
+      opacity: 0.92;
+    }
+
+    .roses { position: absolute; inset: 0; }
+    .rose {
+      position: absolute;
+      bottom: 54px;
+      width: 72px;
+      height: 110px;
+    }
+    .stem {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 4px;
+      height: 70px;
+      background: linear-gradient(180deg, #6ece76, #2b6d31);
+      transform: translateX(-50%);
+      border-radius: 999px;
+    }
+    .leaf {
+      position: absolute;
+      width: 22px;
+      height: 12px;
+      background: linear-gradient(180deg, #73d97f, #2f7e39);
+      border-radius: 100% 0 100% 0;
+      top: 58px;
+    }
+    .leaf.left { left: 17px; transform: rotate(-28deg); }
+    .leaf.right { right: 17px; transform: scaleX(-1) rotate(-28deg); }
+    .bloom {
+      position: absolute;
+      left: 50%;
+      top: 6px;
+      width: 50px;
+      height: 50px;
+      transform: translateX(-50%);
+    }
+    .petal {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border-radius: 70% 70% 70% 70%;
+      box-shadow: 0 0 10px rgba(255,255,255,0.16);
+    }
+    .center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, #ffd2e7 60%, #ff9fc8 100%);
+      box-shadow: 0 0 10px rgba(255, 220, 235, 0.7);
+    }
+    .rose.white .petal { background: radial-gradient(circle at 35% 35%, #ffffff 0%, #fff7fb 42%, #ffe8f2 75%, #ffdce9 100%); }
+    .rose.pink .petal { background: radial-gradient(circle at 35% 35%, #ffeaf5 0%, #ffcbe0 42%, #ff9fc8 72%, #ff7cb7 100%); }
+    .petal.p1 { left: 12px; top: 0; }
+    .petal.p2 { left: 0; top: 12px; }
+    .petal.p3 { right: 0; top: 12px; }
+    .petal.p4 { left: 12px; bottom: 0; }
+    .petal.p5 { left: 12px; top: 12px; width: 24px; height: 24px; }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(0.98); opacity: 0.9; }
+      50% { transform: scale(1.04); opacity: 1; }
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(0.75); opacity: 0; }
+      12% { opacity: 0.92; }
+      100% { transform: translateY(-108vh) scale(1.2); opacity: 0; }
+    }
+
+    @media (max-width: 560px) {
+      .scene { padding-bottom: 230px; }
+      .garden { height: 170px; }
+      .rose { width: 58px; height: 98px; }
+      .bloom { width: 42px; height: 42px; }
+      .petal { width: 22px; height: 22px; }
+      .center { width: 16px; height: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="sky"></canvas>
+  <canvas id="fireworks"></canvas>
+
+  <div class="floating-hearts" id="floatingHearts"></div>
+
+  <div class="scene">
+    <div class="heart-stage">
+      <div class="heart-aura"></div>
+      <div id="heart"></div>
+    </div>
+  </div>
+
+  <div class="garden" aria-hidden="true">
+    <div class="grass-layer grass-back"></div>
+    <div class="blades" id="blades"></div>
+    <div class="roses" id="roses"></div>
+    <div class="grass-layer grass-front"></div>
+  </div>
+
+  <div class="secret-box">
+    <button class="secret-button" id="secretBtn">💌 กดเปิดข้อความ</button>
+    <div class="secret-content" id="secretContent">
+      <p>เอิงอ้วนที่สุด รักเอิงนะคะ ทะเลาะกันทั้งปี ก็รักเหมือนเดิมตลอดนะอ้วน </p>
+    </div>
+  </div>
+
+  <script>
+    const heartPattern = [
+'0000001111000001111000000',
+'0000111111110111111110000',
+'0000111111111111111110000',
+'0001111111111111111111000',
+'0001111111111111111111000',
+'0001111111111111111111000',
+'0001111111111111111111000',
+'0001111111111111111111000',
+'0001111111111111111111000',
+'0000111111111111111110000',
+'0000111111111111111110000',
+'0000011111111111111100000',
+'0000001111111111111000000',
+'0000000111111111110000000',
+'0000000011111111100000000',
+'0000000001111111000000000',
+'0000000000011100000000000',
+'0000000000001000000000000'
+];
+
+    const heart = document.getElementById('heart');
+    const pixels = [];
+    heart.style.gridTemplateColumns = `repeat(${heartPattern[0].length}, auto)`;
+
+    heartPattern.forEach(row => {
+      [...row].forEach(cell => {
+        const px = document.createElement('div');
+        px.className = 'pixel';
+        if (cell === '1') px.dataset.fill = '1';
+        heart.appendChild(px);
+        pixels.push(px);
+      });
+    });
+
+    function revealHeart() {
+      const order = pixels.map((pixel, idx) => pixel.dataset.fill === '1' ? idx : null).filter(idx => idx !== null);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      const total = 8200;
+      order.forEach((idx, step) => {
+        setTimeout(() => pixels[idx].classList.add('on'), 350 + step * total / order.length);
+      });
+    }
+
+    // floating hearts
+    const floatingHearts = document.getElementById('floatingHearts');
+    function spawnMiniHeart() {
+      const h = document.createElement('div');
+      h.className = 'mini-heart';
+      h.textContent = Math.random() > 0.45 ? '❤' : '💖';
+      h.style.left = Math.random() * 100 + '%';
+      h.style.fontSize = (14 + Math.random() * 16) + 'px';
+      h.style.animationDuration = (7 + Math.random() * 4) + 's';
+      floatingHearts.appendChild(h);
+      setTimeout(() => h.remove(), 12000);
+    }
+    setInterval(spawnMiniHeart, 1500);
+
+    // secret box
+    const secretBtn = document.getElementById('secretBtn');
+    const secretContent = document.getElementById('secretContent');
+    let isOpen = false;
+    secretBtn.addEventListener('click', () => {
+      isOpen = !isOpen;
+      secretContent.classList.toggle('open', isOpen);
+      secretBtn.textContent = isOpen ? '💗 ปิดข้อความ' : '💌 กดเปิดข้อความ';
+    });
+
+    // Garden blades
+    const bladesWrap = document.getElementById('blades');
+    for (let i = 0; i < 130; i++) {
+      const blade = document.createElement('div');
+      blade.className = 'blade';
+      blade.style.left = Math.random() * 100 + '%';
+      blade.style.height = (24 + Math.random() * 42) + 'px';
+      blade.style.transform = `rotate(${(-20 + Math.random() * 40).toFixed(2)}deg)`;
+      blade.style.opacity = (0.5 + Math.random() * 0.45).toFixed(2);
+      bladesWrap.appendChild(blade);
+    }
+
+    // Roses
+    const rosesWrap = document.getElementById('roses');
+    const rosePositions = [4, 10, 16, 23, 29, 37, 44, 52, 59, 67, 75, 82, 89, 95];
+    rosePositions.forEach((pos, i) => {
+      const rose = document.createElement('div');
+      rose.className = 'rose ' + (i % 2 === 0 ? 'pink' : 'white');
+      rose.style.left = `calc(${pos}% - 30px)`;
+      rose.style.bottom = (45 + Math.random() * 18) + 'px';
+      rose.style.transform = `scale(${(0.82 + Math.random() * 0.34).toFixed(2)}) rotate(${(-6 + Math.random() * 12).toFixed(2)}deg)`;
+      rose.innerHTML = `
+        <div class="stem"></div>
+        <div class="leaf left"></div>
+        <div class="leaf right"></div>
+        <div class="bloom">
+          <div class="petal p1"></div>
+          <div class="petal p2"></div>
+          <div class="petal p3"></div>
+          <div class="petal p4"></div>
+          <div class="petal p5"></div>
+          <div class="center"></div>
+        </div>
+      `;
+      rosesWrap.appendChild(rose);
+    });
+
+    // sky stars
+    const sky = document.getElementById('sky');
+    const skyCtx = sky.getContext('2d');
+    const fw = document.getElementById('fireworks');
+    const fwCtx = fw.getContext('2d');
+
+    const stars = Array.from({ length: 120 }, () => ({
+      x: Math.random(), y: Math.random() * 0.8,
+      r: Math.random() * 1.7 + 0.2,
+      a: Math.random() * 0.7 + 0.15,
+      speed: Math.random() * 0.02 + 0.005
+    }));
+
+    let particles = [];
+    let rockets = [];
+
+    function resize() {
+      [sky, fw].forEach(c => {
+        c.width = innerWidth * devicePixelRatio;
+        c.height = innerHeight * devicePixelRatio;
+        c.style.width = innerWidth + 'px';
+        c.style.height = innerHeight + 'px';
+      });
+      skyCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      fwCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+    addEventListener('resize', resize);
+
+    function drawSky() {
+      skyCtx.clearRect(0, 0, innerWidth, innerHeight);
+      for (const s of stars) {
+        skyCtx.beginPath();
+        skyCtx.fillStyle = `rgba(255, 226, 240, ${s.a})`;
+        skyCtx.arc(s.x * innerWidth, s.y * innerHeight, s.r, 0, Math.PI * 2);
+        skyCtx.fill();
+        s.a += s.speed * (Math.random() > 0.5 ? 1 : -1);
+        if (s.a > 0.95 || s.a < 0.12) s.speed *= -1;
+      }
+      requestAnimationFrame(drawSky);
+    }
+
+    function launchRocket() {
+      rockets.push({
+        x: innerWidth * (0.12 + Math.random() * 0.76),
+        y: innerHeight + 10,
+        targetY: innerHeight * (0.12 + Math.random() * 0.28),
+        speed: 4.8 + Math.random() * 1.8,
+        color: ['#ff5aa8', '#ffd76d', '#ffb1d3', '#ffffff'][Math.floor(Math.random() * 4)]
+      });
+    }
+
+    function explode(x, y, count = 44) {
+      const palette = ['#ff5aa8', '#ff8fc5', '#ffd76d', '#ffffff', '#ffcfe3'];
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+        const speed = 1.2 + Math.random() * 3.6;
+        particles.push({
+          x, y,
+          dx: Math.cos(angle) * speed,
+          dy: Math.sin(angle) * speed,
+          life: 1,
+          decay: 0.012 + Math.random() * 0.018,
+          size: 1.5 + Math.random() * 3.2,
+          color: palette[Math.floor(Math.random() * palette.length)]
+        });
+      }
+    }
+
+    function animateFireworks() {
+      fwCtx.clearRect(0, 0, innerWidth, innerHeight);
+
+      rockets.forEach((r, i) => {
+        fwCtx.save();
+        fwCtx.fillStyle = r.color;
+        fwCtx.shadowBlur = 10;
+        fwCtx.shadowColor = r.color;
+        fwCtx.beginPath();
+        fwCtx.arc(r.x, r.y, 2.2, 0, Math.PI * 2);
+        fwCtx.fill();
+        fwCtx.restore();
+
+        r.y -= r.speed;
+        if (r.y <= r.targetY) {
+          explode(r.x, r.y, 48 + Math.floor(Math.random() * 16));
+          rockets.splice(i, 1);
+        }
+      });
+
+      particles = particles.filter(p => p.life > 0.02);
+      for (const p of particles) {
+        fwCtx.save();
+        fwCtx.globalAlpha = p.life;
+        fwCtx.fillStyle = p.color;
+        fwCtx.shadowBlur = 12;
+        fwCtx.shadowColor = p.color;
+        fwCtx.beginPath();
+        fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        fwCtx.fill();
+        fwCtx.restore();
+        p.x += p.dx;
+        p.y += p.dy;
+        p.dy += 0.018;
+        p.dx *= 0.993;
+        p.life -= p.decay;
+      }
+      requestAnimationFrame(animateFireworks);
+    }
+
+    // start fireworks immediately
+    function startFireworksLoop() {
+      launchRocket();
+      setInterval(launchRocket, 700);
+    }
+
+    resize();
+    drawSky();
+    animateFireworks();
+    revealHeart();
+    startFireworksLoop();
+  </script>
+</body>
+</html>
